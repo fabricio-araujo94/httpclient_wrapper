@@ -23,4 +23,12 @@ export class HttpClient {
       Accept: "application/json",
     };
   }
+
+  public addRequestInterceptor(interceptor: RequestInterceptor): void {
+    this.requestInterceptors.push(interceptor);
+  }
+
+  public addResponseInterceptor(interceptor: ResponseInterceptor): void {
+    this.responseInterceptors.push(interceptor);
+  }
 }
