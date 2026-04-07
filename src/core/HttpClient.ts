@@ -31,4 +31,47 @@ export class HttpClient {
   public addResponseInterceptor(interceptor: ResponseInterceptor): void {
     this.responseInterceptors.push(interceptor);
   }
+
+  private async request<T>(
+    endpoint: string,
+    options: RequestInit = {},
+  ): Promise<T> {
+    const url = `${this.baseUrl}${endpoint}`;
+
+    let config: RequestInit = {
+      ...options,
+      headers: {
+        ...this.defaultHeaders,
+        ...options.headers,
+      },
+    };
+
+    for (const interceptor of this.requestInterceptors) {
+      config = await interceptor(config);
+    }
+
+    let response = await fetch(url, config);
+
+    for (const interceptor of this.responseInterceptors) {
+      response = await interceptor(response);
+    }
+
+    if (!response.ok) {
+      let errorData = null;
+      try {
+        errorData = await response.json();
+      } catch (e) {
+        errorData = await response.text;
+      }
+
+      throw new HttpError(response.status, response.statusText, errorData);
+    }
+
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+      return (await response.json()) as T;
+    }
+
+    return (await response.text()) as unknown as T;
+  }
 }
