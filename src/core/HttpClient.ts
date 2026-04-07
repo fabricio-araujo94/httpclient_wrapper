@@ -2,6 +2,7 @@ import { HttpError } from "../errors/HttpError";
 
 interface HttpClientConfig extends RequestInit {
   baseUrl?: string;
+  timeout?: number;
 }
 
 type RequestInterceptor = (
@@ -12,12 +13,14 @@ type ResponseInterceptor = (response: Response) => Response | Promise<Response>;
 export class HttpClient {
   private baseUrl: string;
   private defaultHeaders: HeadersInit;
+  private defaultTimeout: number;
 
   private requestInterceptors: RequestInterceptor[] = [];
   private responseInterceptors: ResponseInterceptor[] = [];
 
   constructor(config: HttpClientConfig = {}) {
     this.baseUrl = config.baseUrl || "";
+    this.defaultTimeout = config.timeout || 10000; // 10 secs
     this.defaultHeaders = config.headers || {
       "Content-Type": "application/json",
       Accept: "application/json",
@@ -34,55 +37,72 @@ export class HttpClient {
 
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {},
+    options: HttpClientConfig = {},
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(
+      () => controller.abort(),
+      options.timeout || this.defaultTimeout,
+    );
+
     let config: RequestInit = {
       ...options,
+      signal: controller.signal, // attach the abort signal to the fetch call
       headers: {
         ...this.defaultHeaders,
         ...options.headers,
       },
     };
 
-    for (const interceptor of this.requestInterceptors) {
-      config = await interceptor(config);
-    }
-
-    let response = await fetch(url, config);
-
-    for (const interceptor of this.responseInterceptors) {
-      response = await interceptor(response);
-    }
-
-    if (!response.ok) {
-      let errorData = null;
-      try {
-        errorData = await response.json();
-      } catch (e) {
-        errorData = await response.text;
+    try {
+      for (const interceptor of this.requestInterceptors) {
+        config = await interceptor(config);
       }
 
-      throw new HttpError(response.status, response.statusText, errorData);
-    }
+      let response = await fetch(url, config);
 
-    const contentType = response.headers.get("content-type");
-    if (contentType && contentType.includes("application/json")) {
-      return (await response.json()) as T;
-    }
+      for (const interceptor of this.responseInterceptors) {
+        response = await interceptor(response);
+      }
 
-    return (await response.text()) as unknown as T;
+      if (!response.ok) {
+        let errorData = null;
+        try {
+          errorData = await response.json();
+        } catch (e) {
+          errorData = await response.text();
+        }
+        throw new HttpError(response.status, response.statusText, errorData);
+      }
+
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        return (await response.json()) as T;
+      }
+
+      return (await response.text()) as unknown as T;
+    } catch (error: any) {
+      if (error.name === "AbortError") {
+        throw new Error(
+          `Request timed out after ${options.timeout || this.defaultTimeout}ms`,
+        );
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
 
-  public get<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  public get<T>(endpoint: string, options?: HttpClientConfig): Promise<T> {
     return this.request<T>(endpoint, { ...options, method: "GET" });
   }
 
   public post<T>(
     endpoint: string,
     body: any,
-    options?: RequestInit,
+    options?: HttpClientConfig,
   ): Promise<T> {
     return this.request<T>(endpoint, {
       ...options,
@@ -94,7 +114,7 @@ export class HttpClient {
   public put<T>(
     endpoint: string,
     body: any,
-    options?: RequestInit,
+    options?: HttpClientConfig,
   ): Promise<T> {
     return this.request<T>(endpoint, {
       ...options,
@@ -103,7 +123,7 @@ export class HttpClient {
     });
   }
 
-  public delete<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  public delete<T>(endpoint: string, options?: HttpClientConfig): Promise<T> {
     return this.request<T>(endpoint, { ...options, method: "DELETE" });
   }
 }

@@ -2,7 +2,8 @@ import { HttpClient } from "./core/HttpClient";
 import { HttpError } from "./errors/HttpError";
 
 const api = new HttpClient({
-  baseUrl: "https://jsonplaceholder.typicode.com",
+  baseUrl: "https://httpbin.org",
+  timeout: 5000,
 });
 
 api.addRequestInterceptor((config) => {
@@ -61,4 +62,37 @@ async function runDemo() {
   }
 }
 
-runDemo();
+async function runTimeoutDemo() {
+  console.log("Starting timeout demo...");
+
+  try {
+    console.log(
+      "Requesting an endpoint that takes 3 seconds to respond, with a 1 second timeout...",
+    );
+
+    // simulating a scenario where the server is slow
+    await api.get("/delay/3", { timeout: 1000 });
+
+    console.log("Success!"); // this should not happen
+  } catch (error: any) {
+    if (error instanceof HttpError) {
+      console.error(`API Error: ${error.status}`);
+    } else {
+      console.error(`Client Error: ${error.message}`);
+    }
+  }
+
+  try {
+    console.log(
+      "Requesting an endpoint that takes 1 second to respond, with a 5 second timeout...",
+    );
+
+    const response = await api.get("/delay/1");
+    console.log("Success!.");
+  } catch (error: any) {
+    console.error("Failure:", error.message);
+  }
+}
+
+// runDemo();
+runTimeoutDemo();
