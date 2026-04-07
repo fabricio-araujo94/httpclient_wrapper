@@ -74,4 +74,36 @@ export class HttpClient {
 
     return (await response.text()) as unknown as T;
   }
+
+  public get<T>(endpoint: string, options?: RequestInit): Promise<T> {
+    return this.request<T>(endpoint, { ...options, method: "GET" });
+  }
+
+  public post<T>(
+    endpoint: string,
+    body: any,
+    options?: RequestInit,
+  ): Promise<T> {
+    return this.request<T>(endpoint, {
+      ...options,
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  }
+
+  public put<T>(
+    endpoint: string,
+    body: any,
+    options?: RequestInit,
+  ): Promise<T> {
+    return this.request<T>(endpoint, {
+      ...options,
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+  }
+
+  public delete<T>(endpoint: string, options?: RequestInit): Promise<T> {
+    return this.request<T>(endpoint, { ...options, method: "DELETE" });
+  }
 }
