@@ -1,11 +1,18 @@
 import { HttpError } from "../errors/HttpError";
 
+interface CacheEntry {
+  data: any;
+  expiresAt: number;
+}
+
 interface HttpClientConfig extends RequestInit {
   baseUrl?: string;
   timeout?: number;
   params?: Record<string, any>;
   retries?: number;
   retryDelay?: number;
+  useCache?: boolean;
+  cacheTTL?: number;
 }
 
 type RequestInterceptor = (
@@ -21,6 +28,8 @@ export class HttpClient {
   private defaultTimeout: number;
   private defaultRetries: number;
   private defaultRetryDelay: number;
+  private defaultCacheTTL: number;
+  private cacheStorage: Map<string, CacheEntry> = new Map();
 
   private requestInterceptors: RequestInterceptor[] = [];
   private responseInterceptors: ResponseInterceptor[] = [];
@@ -30,6 +39,7 @@ export class HttpClient {
     this.defaultTimeout = config.timeout || 10000; // 10 secs
     this.defaultRetries = config.retries ?? 0;
     this.defaultRetryDelay = config.retryDelay || 1000;
+    this.defaultCacheTTL = config.cacheTTL || 60000;
     this.defaultHeaders = config.headers || {
       "Content-Type": "application/json",
       Accept: "application/json",
@@ -42,6 +52,10 @@ export class HttpClient {
 
   public addResponseInterceptor(interceptor: ResponseInterceptor): void {
     this.responseInterceptors.push(interceptor);
+  }
+
+  public clearCache(): void {
+    this.cacheStorage.clear();
   }
 
   private buildQueryString(params?: Record<string, any>): string {
@@ -111,6 +125,18 @@ export class HttpClient {
     const queryString = this.buildQueryString(options.params);
     const url = `${this.baseUrl}${endpoint}${queryString}`;
 
+    const isGetRequest =
+      !options.method || options.method.toUpperCase() === "GET";
+    const shouldCache = options.useCache === true && isGetRequest;
+
+    if (shouldCache) {
+      const cached = this.cacheStorage.get(url);
+      if (cached && cached.expiresAt > Date.now()) {
+        console.log(`[Cache Hit] Returning stored data for: ${url}`);
+        return cached.data as T;
+      }
+    }
+
     const controller = new AbortController();
     const timeoutId = setTimeout(
       () => controller.abort(),
@@ -147,12 +173,22 @@ export class HttpClient {
         throw new HttpError(response.status, response.statusText, errorData);
       }
 
+      let responseData: any;
       const contentType = response.headers.get("content-type");
       if (contentType && contentType.includes("application/json")) {
-        return (await response.json()) as T;
+        responseData = await response.json();
+      } else {
+        responseData = await response.text();
       }
 
-      return (await response.text()) as unknown as T;
+      if (shouldCache) {
+        this.cacheStorage.set(url, {
+          data: responseData,
+          expiresAt: Date.now() + (options.cacheTTL || this.defaultCacheTTL),
+        });
+      }
+
+      return responseData as T;
     } catch (error: any) {
       if (error.name === "AbortError") {
         throw new Error(

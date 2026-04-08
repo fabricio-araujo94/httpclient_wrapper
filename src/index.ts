@@ -2,7 +2,7 @@ import { HttpClient } from "./core/HttpClient";
 import { HttpError } from "./errors/HttpError";
 
 const api = new HttpClient({
-  baseUrl: "https://httpbin.org",
+  baseUrl: "https://jsonplaceholder.typicode.com",
   timeout: 5000,
   retries: 3,
   retryDelay: 1000,
@@ -144,7 +144,44 @@ async function runRetryDemo() {
   }
 }
 
+async function measureTime(name: string, fn: () => Promise<any>) {
+  const start = performance.now();
+  await fn();
+  const end = performance.now();
+  console.log(`${name} took ${(end - start).toFixed(2)}ms`);
+}
+
+async function runCacheDemo() {
+  console.log("Starting cache demo...");
+
+  try {
+    await measureTime("First request...", async () => {
+      const data = await api.get("/posts/1", {
+        useCache: true,
+        cacheTTL: 5000,
+      });
+      console.log("Data fetched from server.");
+    });
+
+    await measureTime("Second request...", async () => {
+      const data = await api.get("/posts/1", { useCache: true });
+      console.log("Data retrieved.");
+    });
+
+    console.log("Waiting 6 seconds for cache to expire...");
+    await new Promise((resolve) => setTimeout(resolve, 6000));
+
+    await measureTime("Third request...", async () => {
+      const data = await api.get("/posts/1", { useCache: true });
+      console.log("Data fetched from server again.");
+    });
+  } catch (error: any) {
+    console.error("Request failed:", error.message);
+  }
+}
+
 // runDemo();
 // runTimeoutDemo();
 // runQueryStringDemo();
-runRetryDemo();
+// runRetryDemo();
+runCacheDemo();
