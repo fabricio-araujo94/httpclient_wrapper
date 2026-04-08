@@ -4,6 +4,8 @@ interface HttpClientConfig extends RequestInit {
   baseUrl?: string;
   timeout?: number;
   params?: Record<string, any>;
+  retries?: number;
+  retryDelay?: number;
 }
 
 type RequestInterceptor = (
@@ -11,10 +13,14 @@ type RequestInterceptor = (
 ) => RequestInit | Promise<RequestInit>;
 type ResponseInterceptor = (response: Response) => Response | Promise<Response>;
 
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export class HttpClient {
   private baseUrl: string;
   private defaultHeaders: HeadersInit;
   private defaultTimeout: number;
+  private defaultRetries: number;
+  private defaultRetryDelay: number;
 
   private requestInterceptors: RequestInterceptor[] = [];
   private responseInterceptors: ResponseInterceptor[] = [];
@@ -22,6 +28,8 @@ export class HttpClient {
   constructor(config: HttpClientConfig = {}) {
     this.baseUrl = config.baseUrl || "";
     this.defaultTimeout = config.timeout || 10000; // 10 secs
+    this.defaultRetries = config.retries ?? 0;
+    this.defaultRetryDelay = config.retryDelay || 1000;
     this.defaultHeaders = config.headers || {
       "Content-Type": "application/json",
       Accept: "application/json",
@@ -59,6 +67,46 @@ export class HttpClient {
   private async request<T>(
     endpoint: string,
     options: HttpClientConfig = {},
+  ): Promise<T> {
+    const maxRetries = options.retries ?? this.defaultRetries;
+    const baseDelay = options.retryDelay ?? this.defaultRetryDelay;
+
+    let attempt = 0;
+
+    while (attempt <= maxRetries) {
+      try {
+        return await this.executeFetch<T>(endpoint, options);
+      } catch (error: any) {
+        const isNetworkError =
+          error.name === "TypeError" || error.name === "FetchError";
+        const isTimeout = error.message.includes("timed out");
+        const isRetryableHttpError =
+          error instanceof HttpError &&
+          [400, 429, 500, 502, 503, 504].includes(error.status);
+
+        const shouldRetry = isNetworkError || isTimeout || isRetryableHttpError;
+
+        if (!shouldRetry || attempt >= maxRetries) {
+          throw error;
+        }
+
+        attempt++;
+        const backoffDelay = baseDelay * Math.pow(2, attempt - 1);
+
+        console.warn(
+          `[Retry] Attempt ${attempt} failed. Retrying in ${backoffDelay}ms... (${endpoint})`,
+        );
+
+        await delay(backoffDelay);
+      }
+    }
+
+    throw new Error("Unreachable code");
+  }
+
+  private async executeFetch<T>(
+    endpoint: string,
+    options: HttpClientConfig,
   ): Promise<T> {
     const queryString = this.buildQueryString(options.params);
     const url = `${this.baseUrl}${endpoint}${queryString}`;

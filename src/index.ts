@@ -4,6 +4,8 @@ import { HttpError } from "./errors/HttpError";
 const api = new HttpClient({
   baseUrl: "https://httpbin.org",
   timeout: 5000,
+  retries: 3,
+  retryDelay: 1000,
 });
 
 interface HttpBinResponse {
@@ -123,6 +125,26 @@ async function runQueryStringDemo() {
   }
 }
 
+async function runRetryDemo() {
+  console.log("Starting retry & exponential backoff demo...");
+
+  try {
+    console.log("Simulating a failing server...");
+
+    await api.get("/status/503");
+  } catch (error: any) {
+    console.log("Final result:");
+    if (error instanceof HttpError) {
+      console.error(
+        `Operation failed permanently after all retries. Final status: ${error.status}`,
+      );
+    } else {
+      console.error("Operation failed:", error.message);
+    }
+  }
+}
+
 // runDemo();
 // runTimeoutDemo();
-runQueryStringDemo();
+// runQueryStringDemo();
+runRetryDemo();
