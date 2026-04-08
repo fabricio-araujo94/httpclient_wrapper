@@ -3,6 +3,7 @@ import { HttpError } from "../errors/HttpError";
 interface HttpClientConfig extends RequestInit {
   baseUrl?: string;
   timeout?: number;
+  params?: Record<string, any>;
 }
 
 type RequestInterceptor = (
@@ -35,11 +36,32 @@ export class HttpClient {
     this.responseInterceptors.push(interceptor);
   }
 
+  private buildQueryString(params?: Record<string, any>): string {
+    if (!params || Object.keys(params).length === 0) {
+      return "";
+    }
+
+    const searchParams = new URLSearchParams();
+
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        if (Array.isArray(value)) {
+          value.forEach((val) => searchParams.append(key, String(val)));
+        } else {
+          searchParams.append(key, String(value));
+        }
+      }
+    });
+
+    return `?${searchParams.toString()}`;
+  }
+
   private async request<T>(
     endpoint: string,
     options: HttpClientConfig = {},
   ): Promise<T> {
-    const url = `${this.baseUrl}${endpoint}`;
+    const queryString = this.buildQueryString(options.params);
+    const url = `${this.baseUrl}${endpoint}${queryString}`;
 
     const controller = new AbortController();
     const timeoutId = setTimeout(

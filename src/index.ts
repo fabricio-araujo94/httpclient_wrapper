@@ -6,6 +6,11 @@ const api = new HttpClient({
   timeout: 5000,
 });
 
+interface HttpBinResponse {
+  args: Record<string, string | string[]>;
+  url: string;
+}
+
 api.addRequestInterceptor((config) => {
   console.log("[Interceptor] Outgoing Request...");
 
@@ -94,5 +99,30 @@ async function runTimeoutDemo() {
   }
 }
 
+async function runQueryStringDemo() {
+  console.log("Starting query string demo...");
+
+  try {
+    const response = await api.get<HttpBinResponse>("/get", {
+      params: {
+        search: "clean architecture",
+        page: 2,
+        isActive: true,
+        tags: ["typescript", "node"],
+        emptyField: null,
+      },
+    });
+
+    console.log("Generated url by the client...");
+    console.log(response.url);
+
+    console.log("Parsed arguments received by the server...");
+    console.log(response.args);
+  } catch (error: any) {
+    console.error("Request failed:", error.message);
+  }
+}
+
 // runDemo();
-runTimeoutDemo();
+// runTimeoutDemo();
+runQueryStringDemo();
