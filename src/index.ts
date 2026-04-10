@@ -1,5 +1,7 @@
 import { HttpClient, TelemetryMetrics } from "./core/HttpClient";
 import { HttpError } from "./errors/HttpError";
+import { UserService } from "./services/UserService";
+import { viaCepApi } from "./api";
 
 const api = new HttpClient({
   baseURL: 'https://httpbin.org',
@@ -262,6 +264,25 @@ async function runMapperDemo() {
   }
 }
 
+async function bootstrap() {
+  console.log('Starting application...');
+
+  try {
+    // from our own backend
+    console.log('Fetching user profile...');
+    // this will fail because localhost:8000 is not running
+    // const profile = await UserService.getProfile();
+    // console.log('Welcome back,', profile.email);
+
+    // from an external public instance
+    console.log('Fetching address data...');
+    const address = await viaCepApi.get('/01001000/json/');
+    console.log('Address found:', address);
+  } catch (error: any) {
+    console.error('System error:', error.message);
+  }
+}
+
 
 // runDemo();
 // runTimeoutDemo();
@@ -269,4 +290,5 @@ async function runMapperDemo() {
 // runRetryDemo();
 // runCacheDemo();
 // runTelemetryDemo();
-runMapperDemo();
+// runMapperDemo();
+bootstrap();
