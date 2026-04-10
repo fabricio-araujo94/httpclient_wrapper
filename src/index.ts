@@ -1,11 +1,11 @@
-import { HttpClient } from "./core/HttpClient";
+import { HttpClient, TelemetryMetrics } from "./core/HttpClient";
 import { HttpError } from "./errors/HttpError";
 
 const api = new HttpClient({
-  baseUrl: "https://jsonplaceholder.typicode.com",
-  timeout: 5000,
-  retries: 3,
-  retryDelay: 1000,
+  baseUrl: "https://httpbin.org",
+  useCache: true,
+  cacheTTL: 5000,
+  onTelemetry: sendToDatadog,
 });
 
 interface HttpBinResponse {
@@ -180,8 +180,34 @@ async function runCacheDemo() {
   }
 }
 
+function sendToDatadog(metrics: TelemetryMetrics) {
+  // in a real project, this would be an independent background request
+  const source = metrics.isCacheHit ? '[CACHE]' : '[NETWORK]';
+  const time = metrics.durationMs.toFixed(2);
+  
+  console.log(`
+    [TELEMETRY] ${source} ${metrics.method} ${metrics.url} | Status: ${metrics.status} | Time: ${time}ms
+    `);
+
+  console.table([metrics]);
+}
+
+async function runTelemetryDemo() {
+  console.log("Starting telemetry demo...");
+
+  try {
+    // to measure time, don't put console.logs here
+    await api.get("/delay/1");
+    await api.get("/delay/1");
+    await api.get("/status/404");
+  } catch (error) {
+    // error is handled, but telemetry already logged the failure
+  }
+}
+
 // runDemo();
 // runTimeoutDemo();
 // runQueryStringDemo();
 // runRetryDemo();
-runCacheDemo();
+// runCacheDemo();
+runTelemetryDemo();

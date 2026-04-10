@@ -5,6 +5,15 @@ interface CacheEntry {
   expiresAt: number;
 }
 
+export interface TelemetryMetrics {
+  url: string;
+  method: string;
+  status: number;
+  durationMs: number;
+  timestamp: string;
+  isCacheHit: boolean;
+}
+
 interface HttpClientConfig extends RequestInit {
   baseUrl?: string;
   timeout?: number;
@@ -13,6 +22,8 @@ interface HttpClientConfig extends RequestInit {
   retryDelay?: number;
   useCache?: boolean;
   cacheTTL?: number;
+
+  onTelemetry?: (metrics: TelemetryMetrics) => void;
 }
 
 type RequestInterceptor = (
@@ -118,64 +129,69 @@ export class HttpClient {
     throw new Error("Unreachable code");
   }
 
-  private async executeFetch<T>(
-    endpoint: string,
-    options: HttpClientConfig,
-  ): Promise<T> {
+  private async executeFetch<T>(endpoint: string, options: HttpClientConfig): Promise<T> {
     const queryString = this.buildQueryString(options.params);
     const url = `${this.baseUrl}${endpoint}${queryString}`;
+    const method = (options.method || 'GET').toUpperCase();
+    
+    const startTime = performance.now();
 
-    const isGetRequest =
-      !options.method || options.method.toUpperCase() === "GET";
+    const isGetRequest = method === 'GET';
     const shouldCache = options.useCache === true && isGetRequest;
 
     if (shouldCache) {
       const cached = this.cacheStorage.get(url);
       if (cached && cached.expiresAt > Date.now()) {
-        console.log(`[Cache Hit] Returning stored data for: ${url}`);
+        
+        if (options.onTelemetry) {
+          options.onTelemetry({
+             url,
+             method,
+             status: 200, 
+             durationMs: performance.now() - startTime,
+             timestamp: new Date().toISOString(),
+             isCacheHit: true
+          });
+        }
+        
         return cached.data as T;
       }
     }
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(
-      () => controller.abort(),
-      options.timeout || this.defaultTimeout,
-    );
+    const timeoutId = setTimeout(() => controller.abort(), options.timeout || this.defaultTimeout);
 
     let config: RequestInit = {
       ...options,
-      signal: controller.signal, // attach the abort signal to the fetch call
-      headers: {
-        ...this.defaultHeaders,
-        ...options.headers,
-      },
+      signal: controller.signal,
+      headers: { ...this.defaultHeaders, ...options.headers },
     };
 
     try {
-      for (const interceptor of this.requestInterceptors) {
-        config = await interceptor(config);
-      }
-
+      for (const interceptor of this.requestInterceptors) { config = await interceptor(config); }
       let response = await fetch(url, config);
+      for (const interceptor of this.responseInterceptors) { response = await interceptor(response); }
 
-      for (const interceptor of this.responseInterceptors) {
-        response = await interceptor(response);
+      if (options.onTelemetry) {
+        options.onTelemetry({
+          url,
+          method,
+          status: response.status,
+          durationMs: performance.now() - startTime,
+          timestamp: new Date().toISOString(),
+          isCacheHit: false
+        });
       }
 
       if (!response.ok) {
         let errorData = null;
-        try {
-          errorData = await response.json();
-        } catch (e) {
-          errorData = await response.text();
-        }
+        try { errorData = await response.json(); } catch { errorData = await response.text(); }
         throw new HttpError(response.status, response.statusText, errorData);
       }
 
       let responseData: any;
-      const contentType = response.headers.get("content-type");
-      if (contentType && contentType.includes("application/json")) {
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
         responseData = await response.json();
       } else {
         responseData = await response.text();
@@ -189,12 +205,21 @@ export class HttpClient {
       }
 
       return responseData as T;
+
     } catch (error: any) {
-      if (error.name === "AbortError") {
-        throw new Error(
-          `Request timed out after ${options.timeout || this.defaultTimeout}ms`,
-        );
+      
+      if (options.onTelemetry) {
+        options.onTelemetry({
+           url,
+           method,
+           status: error instanceof HttpError ? error.status : 0, 
+           durationMs: performance.now() - startTime,
+           timestamp: new Date().toISOString(),
+           isCacheHit: false
+        });
       }
+
+      if (error.name === 'AbortError') throw new Error(`Request timed out`);
       throw error;
     } finally {
       clearTimeout(timeoutId);
