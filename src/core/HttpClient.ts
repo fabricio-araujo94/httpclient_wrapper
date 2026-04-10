@@ -15,15 +15,16 @@ export interface TelemetryMetrics {
 }
 
 interface HttpClientConfig extends RequestInit {
-  baseUrl?: string;
+  baseURL?: string;
   timeout?: number;
   params?: Record<string, any>;
   retries?: number;
   retryDelay?: number;
   useCache?: boolean;
   cacheTTL?: number;
-
   onTelemetry?: (metrics: TelemetryMetrics) => void;
+  
+  transformResponse?: (data: any) => any;
 }
 
 type RequestInterceptor = (
@@ -46,7 +47,7 @@ export class HttpClient {
   private responseInterceptors: ResponseInterceptor[] = [];
 
   constructor(config: HttpClientConfig = {}) {
-    this.baseUrl = config.baseUrl || "";
+    this.baseUrl = config.baseURL || "";
     this.defaultTimeout = config.timeout || 10000; // 10 secs
     this.defaultRetries = config.retries ?? 0;
     this.defaultRetryDelay = config.retryDelay || 1000;
@@ -191,8 +192,14 @@ export class HttpClient {
 
       let responseData: any;
       const contentType = response.headers.get('content-type');
+      
       if (contentType && contentType.includes('application/json')) {
         responseData = await response.json();
+        
+        if (options.transformResponse) {
+          responseData = options.transformResponse(responseData);
+        }
+        
       } else {
         responseData = await response.text();
       }

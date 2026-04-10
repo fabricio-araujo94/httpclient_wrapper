@@ -2,15 +2,19 @@ import { HttpClient, TelemetryMetrics } from "./core/HttpClient";
 import { HttpError } from "./errors/HttpError";
 
 const api = new HttpClient({
-  baseUrl: "https://httpbin.org",
-  useCache: true,
-  cacheTTL: 5000,
-  onTelemetry: sendToDatadog,
+  baseURL: 'https://httpbin.org',
 });
 
 interface HttpBinResponse {
   args: Record<string, string | string[]>;
   url: string;
+}
+
+interface AppUser {
+  userId: number;
+  firstName: string;
+  lastName: string;
+  isActive: boolean;
 }
 
 api.addRequestInterceptor((config) => {
@@ -205,9 +209,64 @@ async function runTelemetryDemo() {
   }
 }
 
+function toCamelCase(str: string): string {
+  return str.replace(/_([a-z])/g, (match, letter) => letter.toUpperCase());
+}
+
+function snakeToCamelMapper(data: any): any {
+  if (Array.isArray(data)) {
+    return data.map(item => snakeToCamelMapper(item));
+  } else if (data !== null && typeof data === 'object') {
+    const newData: any = {};
+    for (const key of Object.keys(data)) {
+      const camelKey = toCamelCase(key);
+      newData[camelKey] = snakeToCamelMapper(data[key]);
+    }
+    return newData;
+  }
+  return data; 
+}
+
+async function runMapperDemo() {
+  console.log('--- Starting Data Transformer Demo ---');
+
+  try {
+    // We will simulate a server returning snake_case data.
+    const mockServerResponse = {
+      user_id: 101,
+      first_name: 'John',
+      last_name: 'Doe',
+      is_active: true
+    };
+
+    console.log('1. Simulating an API call to a Python server...');
+    console.log('Raw data expected from server:', mockServerResponse);
+
+    const response = await api.post<{ json: AppUser }>('/post', mockServerResponse, {
+      // it will intercept the data before it reaches the 'response' variable.
+      transformResponse: (data) => {
+        if (data && data.json) {
+          data.json = snakeToCamelMapper(data.json);
+        }
+        return data;
+      }
+    });
+
+    console.log('\n2. Data received by our application code:');
+    console.log('First Name:', response.json.firstName);
+    console.log('Last Name:', response.json.lastName);
+    console.log('Fully Transformed Object:', response.json);
+
+  } catch (error: any) {
+    console.error('Request failed:', error.message);
+  }
+}
+
+
 // runDemo();
 // runTimeoutDemo();
 // runQueryStringDemo();
 // runRetryDemo();
 // runCacheDemo();
-runTelemetryDemo();
+// runTelemetryDemo();
+runMapperDemo();
