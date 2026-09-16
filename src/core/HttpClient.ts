@@ -22,6 +22,7 @@ interface HttpClientConfig extends RequestInit {
   retryDelay?: number;
   useCache?: boolean;
   cacheTTL?: number;
+  maxCacheSize?: number;
   onTelemetry?: (metrics: TelemetryMetrics) => void;
   
   transformResponse?: (data: any) => any;
@@ -41,6 +42,7 @@ export class HttpClient {
   private defaultRetries: number;
   private defaultRetryDelay: number;
   private defaultCacheTTL: number;
+  private defaultMaxCacheSize: number;
   private onTelemetry?: ((metrics: TelemetryMetrics) => void) | undefined;
   private transformResponse?: ((data: any) => any) | undefined;
   private cacheStorage: Map<string, CacheEntry> = new Map();
@@ -54,6 +56,7 @@ export class HttpClient {
     this.defaultRetries = config.retries ?? 0;
     this.defaultRetryDelay = config.retryDelay || 1000;
     this.defaultCacheTTL = config.cacheTTL || 60000;
+    this.defaultMaxCacheSize = config.maxCacheSize || 100;
     this.defaultHeaders = config.headers || {
       "Content-Type": "application/json",
       Accept: "application/json",
@@ -72,6 +75,50 @@ export class HttpClient {
 
   public clearCache(): void {
     this.cacheStorage.clear();
+  }
+
+  private getCacheEntry(url: string): CacheEntry | undefined {
+    const cached = this.cacheStorage.get(url);
+    if (!cached) return undefined;
+
+    if (cached.expiresAt <= Date.now()) {
+      this.cacheStorage.delete(url);
+      return undefined;
+    }
+
+    // Refresh LRU order (re-insert)
+    this.cacheStorage.delete(url);
+    this.cacheStorage.set(url, cached);
+    return cached;
+  }
+
+  private setCacheEntry(url: string, data: any, ttl: number): void {
+    if (this.cacheStorage.has(url)) {
+      this.cacheStorage.delete(url);
+    } else if (this.cacheStorage.size >= this.defaultMaxCacheSize) {
+      // Purge expired entries first
+      const now = Date.now();
+      for (const [key, entry] of this.cacheStorage.entries()) {
+        if (entry.expiresAt <= now) {
+          this.cacheStorage.delete(key);
+        }
+      }
+
+      // Evict least recently used (oldest inserted) if still at or above capacity
+      while (this.cacheStorage.size >= this.defaultMaxCacheSize) {
+        const oldestKey = this.cacheStorage.keys().next().value;
+        if (oldestKey !== undefined) {
+          this.cacheStorage.delete(oldestKey);
+        } else {
+          break;
+        }
+      }
+    }
+
+    this.cacheStorage.set(url, {
+      data,
+      expiresAt: Date.now() + ttl,
+    });
   }
 
   private buildQueryString(params?: Record<string, any>): string {
@@ -147,9 +194,8 @@ export class HttpClient {
     const shouldCache = options.useCache === true && isGetRequest;
 
     if (shouldCache) {
-      const cached = this.cacheStorage.get(url);
-      if (cached && cached.expiresAt > Date.now()) {
-        
+      const cached = this.getCacheEntry(url);
+      if (cached) {
         if (onTelemetry) {
           onTelemetry({
              url,
@@ -216,10 +262,11 @@ export class HttpClient {
       }
 
       if (shouldCache) {
-        this.cacheStorage.set(url, {
-          data: responseData,
-          expiresAt: Date.now() + (options.cacheTTL || this.defaultCacheTTL),
-        });
+        this.setCacheEntry(
+          url,
+          responseData,
+          options.cacheTTL || this.defaultCacheTTL,
+        );
       }
 
       return responseData as T;
