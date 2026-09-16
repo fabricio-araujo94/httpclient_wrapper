@@ -159,7 +159,7 @@ export class HttpClient {
         const isTimeout = error.message.includes("timed out");
         const isRetryableHttpError =
           error instanceof HttpError &&
-          [400, 429, 500, 502, 503, 504].includes(error.status);
+          [408, 429, 500, 502, 503, 504].includes(error.status);
 
         const shouldRetry = isNetworkError || isTimeout || isRetryableHttpError;
 
