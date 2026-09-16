@@ -41,6 +41,8 @@ export class HttpClient {
   private defaultRetries: number;
   private defaultRetryDelay: number;
   private defaultCacheTTL: number;
+  private onTelemetry?: ((metrics: TelemetryMetrics) => void) | undefined;
+  private transformResponse?: ((data: any) => any) | undefined;
   private cacheStorage: Map<string, CacheEntry> = new Map();
 
   private requestInterceptors: RequestInterceptor[] = [];
@@ -56,6 +58,8 @@ export class HttpClient {
       "Content-Type": "application/json",
       Accept: "application/json",
     };
+    this.onTelemetry = config.onTelemetry;
+    this.transformResponse = config.transformResponse;
   }
 
   public addRequestInterceptor(interceptor: RequestInterceptor): void {
@@ -134,6 +138,8 @@ export class HttpClient {
     const queryString = this.buildQueryString(options.params);
     const url = `${this.baseUrl}${endpoint}${queryString}`;
     const method = (options.method || 'GET').toUpperCase();
+    const onTelemetry = options.onTelemetry || this.onTelemetry;
+    const transformResponse = options.transformResponse || this.transformResponse;
     
     const startTime = performance.now();
 
@@ -144,8 +150,8 @@ export class HttpClient {
       const cached = this.cacheStorage.get(url);
       if (cached && cached.expiresAt > Date.now()) {
         
-        if (options.onTelemetry) {
-          options.onTelemetry({
+        if (onTelemetry) {
+          onTelemetry({
              url,
              method,
              status: 200, 
@@ -173,8 +179,8 @@ export class HttpClient {
       let response = await fetch(url, config);
       for (const interceptor of this.responseInterceptors) { response = await interceptor(response); }
 
-      if (options.onTelemetry) {
-        options.onTelemetry({
+      if (onTelemetry) {
+        onTelemetry({
           url,
           method,
           status: response.status,
@@ -201,8 +207,8 @@ export class HttpClient {
       if (contentType && contentType.includes('application/json')) {
         responseData = await response.json();
         
-        if (options.transformResponse) {
-          responseData = options.transformResponse(responseData);
+        if (transformResponse) {
+          responseData = transformResponse(responseData);
         }
         
       } else {
@@ -220,8 +226,8 @@ export class HttpClient {
 
     } catch (error: any) {
       
-      if (options.onTelemetry) {
-        options.onTelemetry({
+      if (onTelemetry) {
+        onTelemetry({
            url,
            method,
            status: error instanceof HttpError ? error.status : 0, 
