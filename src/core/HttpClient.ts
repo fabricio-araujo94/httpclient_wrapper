@@ -185,8 +185,13 @@ export class HttpClient {
       }
 
       if (!response.ok) {
-        let errorData = null;
-        try { errorData = await response.json(); } catch { errorData = await response.text(); }
+        let errorData: any = null;
+        const rawText = await response.text();
+        try {
+          errorData = JSON.parse(rawText);
+        } catch {
+          errorData = rawText;
+        }
         throw new HttpError(response.status, response.statusText, errorData);
       }
 
