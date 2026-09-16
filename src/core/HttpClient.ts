@@ -138,7 +138,8 @@ export class HttpClient {
       }
     });
 
-    return `?${searchParams.toString()}`;
+    const queryString = searchParams.toString();
+    return queryString ? `?${queryString}` : "";
   }
 
   private async request<T>(

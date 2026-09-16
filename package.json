@@ -15,7 +15,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "MIT License",
   "type": "commonjs",
   "bugs": {
     "url": "https://github.com/fabricio-araujo94/httpclient_wrapper/issues"

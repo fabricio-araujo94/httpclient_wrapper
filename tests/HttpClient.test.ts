@@ -52,6 +52,25 @@ describe("HttpClient", () => {
       );
     });
 
+    it("should NOT append an orphan question mark if all params are null or undefined ([M2] Fix)", async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        })
+      );
+
+      const client = new HttpClient({ baseURL: "https://api.example.com" });
+      await client.get("/users", {
+        params: { a: null, b: undefined },
+      });
+
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        "https://api.example.com/users",
+        expect.any(Object)
+      );
+    });
+
     it("should perform POST and PUT with stringified JSON body", async () => {
       globalThis.fetch = vi.fn().mockImplementation(() =>
         Promise.resolve(
