@@ -30,9 +30,3 @@ export const viaCepApi = new HttpClient({
     useCache: true,
     cacheTTL: 86400000,
 });
-
-export const visionModelApi = new HttpClient({
-    baseURL: 'http://localhost:8001/vision/process',
-    timeout: 300000,
-    retries: 0,
-});

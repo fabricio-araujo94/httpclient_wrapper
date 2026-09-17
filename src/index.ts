@@ -203,9 +203,9 @@ async function runTelemetryDemo() {
 
   try {
     // to measure time, don't put console.logs here
-    await api.get("/delay/1");
-    await api.get("/delay/1");
-    await api.get("/status/404");
+    await api.get("/delay/1", { onTelemetry: sendToDatadog });
+    await api.get("/delay/1", { onTelemetry: sendToDatadog });
+    await api.get("/status/404", { onTelemetry: sendToDatadog });
   } catch (error) {
     // error is handled, but telemetry already logged the failure
   }
