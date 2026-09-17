@@ -25,8 +25,7 @@ jobs:
 
     strategy:
       matrix:
-        # Node 18 é o mínimo (fetch nativo); 20 LTS e 22 LTS cobrem suporte atual
-        node-version: [18, 20, 22]
+        node-version: 22
 
     steps:
       - name: Checkout
