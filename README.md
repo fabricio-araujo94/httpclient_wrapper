@@ -62,14 +62,14 @@ npm install
 
 ## Executando as Demonstrações
 
-O arquivo [src/index.ts](file:///C:/Dev/Archive/httpclient_wrapper/src/index.ts) contém cenários práticos que demonstram cada funcionalidade.
+O arquivo [src/index.ts](./src/index.ts) contém cenários práticos que demonstram cada funcionalidade.
 
 Para executar o arquivo principal:
 ```bash
 npx ts-node src/index.ts
 ```
 
-No final do arquivo [src/index.ts](file:///C:/Dev/Archive/httpclient_wrapper/src/index.ts#L287-L294), você pode descomentar as funções de teste para ver cada recurso em ação:
+No final do arquivo [src/index.ts](./src/index.ts#L287-L294), você pode descomentar as funções de teste para ver cada recurso em ação:
 
 - `runDemo()`: Demonstra requisições GET, POST e captura de erro customizado com `HttpError`.
 - `runTimeoutDemo()`: Demonstra cancelamento automático por timeout.
