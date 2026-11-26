@@ -1,37 +1,37 @@
 # HttpClient Wrapper
 
-Um cliente HTTP modular, tipado e resiliente construído em **TypeScript** sobre a API nativa `fetch`. O projeto implementa recursos essenciais para comunicação HTTP em aplicações Node.js sem depender de bibliotecas externas como Axios.
+A modular, typed, and resilient HTTP client built with **TypeScript** on top of the native `fetch` API. This project implements essential features for HTTP communication in Node.js applications without relying on external libraries like Axios.
 
 ---
 
-## Funcionalidades
+## Features
 
-- **Tipagem Estrita com TypeScript**: Suporte a generics (`<T>`) em todos os métodos HTTP (`get`, `post`, `put`, `delete`).
-- **Instâncias Customizáveis**: Permite instanciar múltiplos clientes com configurações de base (`baseURL`, `headers`, `timeout`, etc.) independentes.
-- **Interceptors**: Suporte a interceptores assíncronos de requisição (`RequestInterceptor`) e de resposta (`ResponseInterceptor`).
-- **Retentativas com Backoff Exponencial**: Retry automático configurável para falhas de rede, timeouts e status HTTP retryable (`400`, `429`, `500`, `502`, `503`, `504`).
-- **Controle de Timeout**: Cancelamento de requisições lentas via `AbortController`.
-- **Cache em Memória**: Sistema de cache em memória para requisições `GET` com suporte a TTL (*Time-To-Live*) configurável.
-- **Construtor de Query String**: Serialização automática de parâmetros de consulta (`params`), com suporte a múltiplos valores (arrays) e descarte de valores `null`/`undefined`.
-- **Telemetria e Métricas**: Callback `onTelemetry` para monitoramento de métricas como duração (`durationMs`), status, URL, método e *cache hit*.
-- **Transformação de Resposta**: Função `transformResponse` para manipular e formatar dados recebidos antes da entrega final.
-- **Tratamento de Erros Personalizado**: Classe `HttpError` contendo `status`, `statusText` e o corpo da resposta (`data`).
+- **Strict TypeScript Typing**: Full generic (`<T>`) support across all HTTP methods (`get`, `post`, `put`, `delete`).
+- **Customizable Instances**: Create multiple client instances with independent base configurations (`baseURL`, `headers`, `timeout`, etc.).
+- **Interceptors**: Asynchronous request (`RequestInterceptor`) and response (`ResponseInterceptor`) interceptors support.
+- **Retries with Exponential Backoff**: Configurable automatic retries for network failures, timeouts, and retryable HTTP statuses (`400`, `429`, `500`, `502`, `503`, `504`).
+- **Timeout Management**: Automatic cancellation of slow requests using `AbortController`.
+- **In-Memory Cache**: Built-in in-memory caching system for `GET` requests with configurable TTL (*Time-To-Live*).
+- **Query String Builder**: Automatic serialization of query parameters (`params`), supporting multi-value arrays and discarding `null`/`undefined` values.
+- **Telemetry & Metrics**: `onTelemetry` callback to track metrics such as duration (`durationMs`), status, URL, method, and cache hit.
+- **Response Transformation**: `transformResponse` function to manipulate and format received data before final resolution.
+- **Custom Error Handling**: `HttpError` class carrying `status`, `statusText`, and response payload (`data`).
 
 ---
 
-## Estrutura do Projeto
+## Project Structure
 
 ```text
 httpclient_wrapper/
 ├── src/
 │   ├── core/
-│   │   └── HttpClient.ts      # Núcleo da biblioteca com a classe HttpClient e interfaces
+│   │   └── HttpClient.ts      # Core library with HttpClient class and interfaces
 │   ├── errors/
-│   │   └── HttpError.ts       # Classe de erro customizada para respostas HTTP não-2xx
+│   │   └── HttpError.ts       # Custom error class for non-2xx HTTP responses
 │   ├── services/
-│   │   └── UserService.ts     # Exemplo de serviço estruturado consumindo a API
-│   ├── api.ts                 # Configuração e exportação de instâncias do HttpClient
-│   └── index.ts               # Demonstrações práticas de todos os recursos
+│   │   └── UserService.ts     # Example structured service consuming the API
+│   ├── api.ts                 # Configuration and export of HttpClient instances
+│   └── index.ts               # Practical demonstrations of all features
 ├── package.json
 ├── tsconfig.json
 └── README.md
@@ -39,62 +39,62 @@ httpclient_wrapper/
 
 ---
 
-## Instalação e Pré-requisitos
+## Installation and Prerequisites
 
-### Pré-requisitos
-- **Node.js** v18+ (que inclui a Fetch API nativa).
-- **npm** ou gerenciador de pacotes equivalente.
+### Prerequisites
+- **Node.js** v18+ (which includes the native Fetch API).
+- **npm** or an equivalent package manager.
 
-### Instalação
+### Installation
 
-1. Clone o repositório:
+1. Clone the repository:
 ```bash
 git clone https://github.com/fabricio-araujo94/httpclient_wrapper.git
 cd httpclient_wrapper
 ```
 
-2. Instale as dependências de desenvolvimento:
+2. Install development dependencies:
 ```bash
 npm install
 ```
 
 ---
 
-## Executando as Demonstrações
+## Running Demonstrations
 
-O arquivo [src/index.ts](./src/index.ts) contém cenários práticos que demonstram cada funcionalidade.
+The [src/index.ts](./src/index.ts) file contains practical scenarios demonstrating each feature.
 
-Para executar o arquivo principal:
+To run the main demo script:
 ```bash
 npx ts-node src/index.ts
 ```
 
-No final do arquivo [src/index.ts](./src/index.ts#L287-L294), você pode descomentar as funções de teste para ver cada recurso em ação:
+At the end of [src/index.ts](./src/index.ts#L287-L294), you can uncomment the demo functions to see each feature in action:
 
-- `runDemo()`: Demonstra requisições GET, POST e captura de erro customizado com `HttpError`.
-- `runTimeoutDemo()`: Demonstra cancelamento automático por timeout.
-- `runQueryStringDemo()`: Demonstra serialização de parâmetros e arrays na URL.
-- `runRetryDemo()`: Demonstra retentativas com backoff exponencial diante de falhas HTTP (ex: 503).
-- `runCacheDemo()`: Demonstra cache em memória e expiração por TTL.
-- `runTelemetryDemo()`: Demonstra extração de métricas de telemetria.
-- `runMapperDemo()`: Demonstra o uso de `transformResponse` para converter respostas em `snake_case` para `camelCase`.
-- `bootstrap()`: Demonstra chamadas a serviços e instâncias externas (ex: ViaCEP).
+- `runDemo()`: Demonstrates GET and POST requests along with custom error catching using `HttpError`.
+- `runTimeoutDemo()`: Demonstrates automatic request cancellation on timeout.
+- `runQueryStringDemo()`: Demonstrates serialization of parameters and arrays in URL query strings.
+- `runRetryDemo()`: Demonstrates retries with exponential backoff on HTTP failures (e.g., 503).
+- `runCacheDemo()`: Demonstrates in-memory caching and TTL expiration.
+- `runTelemetryDemo()`: Demonstrates telemetry metrics extraction.
+- `runMapperDemo()`: Demonstrates `transformResponse` to map responses from `snake_case` to `camelCase`.
+- `bootstrap()`: Demonstrates calls through services and external instances (e.g., ViaCEP).
 
 ---
 
-## Como Usar
+## Usage
 
-### 1. Criando uma Instância
+### 1. Creating an Instance
 
 ```typescript
 import { HttpClient } from "./core/HttpClient";
 
 const api = new HttpClient({
-  baseURL: "https://api.exemplo.com",
-  timeout: 5000,        // 5 segundos de timeout
-  retries: 2,           // Até 2 retentativas em caso de falha
-  retryDelay: 1000,     // Delay inicial de 1 segundo (multiplicado exponencialmente)
-  cacheTTL: 60000,      // TTL de cache padrão: 60 segundos
+  baseURL: "https://api.example.com",
+  timeout: 5000,        // 5-second timeout
+  retries: 2,           // Up to 2 retries on failure
+  retryDelay: 1000,     // Initial delay of 1 second (multiplied exponentially)
+  cacheTTL: 60000,      // Default cache TTL: 60 seconds
   headers: {
     "Content-Type": "application/json",
     "Accept": "application/json",
@@ -102,14 +102,14 @@ const api = new HttpClient({
 });
 ```
 
-### 2. Adicionando Interceptors
+### 2. Adding Interceptors
 
-Você pode interceptar requisições para injetar cabeçalhos de autenticação e respostas para logging ou métricas:
+You can intercept requests to inject authentication headers and intercept responses for logging or metrics:
 
 ```typescript
-// Interceptor de Requisição (adiciona Token JWT)
+// Request Interceptor (adds JWT Token)
 api.addRequestInterceptor(async (config) => {
-  const token = "meu-token-jwt";
+  const token = "my-jwt-token";
   if (token) {
     config.headers = {
       ...config.headers,
@@ -119,14 +119,14 @@ api.addRequestInterceptor(async (config) => {
   return config;
 });
 
-// Interceptor de Resposta
+// Response Interceptor
 api.addResponseInterceptor(async (response) => {
   console.log(`[HTTP] ${response.status} - ${response.url}`);
   return response;
 });
 ```
 
-### 3. Realizando Requisições (GET, POST, PUT, DELETE)
+### 3. Making Requests (GET, POST, PUT, DELETE)
 
 ```typescript
 interface User {
@@ -135,120 +135,120 @@ interface User {
   email: string;
 }
 
-// GET com tipagem
+// Typed GET
 const user = await api.get<User>("/users/1");
 
-// POST com corpo
+// POST with body
 const newUser = await api.post<User>("/users", {
-  name: "Maria Silva",
-  email: "maria@email.com",
+  name: "John Doe",
+  email: "john@example.com",
 });
 
-// PUT com corpo
+// PUT with body
 const updatedUser = await api.put<User>("/users/1", {
-  name: "Maria S. Silva",
+  name: "John D. Doe",
 });
 
 // DELETE
 await api.delete("/users/1");
 ```
 
-### 4. Query Params e Arrays
+### 4. Query Params and Arrays
 
-Parâmetros passados no objeto `params` são convertidos automaticamente em query string. Valores `null` e `undefined` são ignorados:
+Parameters passed in the `params` object are automatically converted into a query string. `null` and `undefined` values are ignored:
 
 ```typescript
 const response = await api.get("/search", {
   params: {
     query: "typescript",
     page: 1,
-    tags: ["node", "api"], // resulta em ?tags=node&tags=api
-    filter: undefined,      // ignorado
+    tags: ["node", "api"], // results in ?tags=node&tags=api
+    filter: undefined,      // ignored
   },
 });
 ```
 
-### 5. Cache em Memória (Apenas GET)
+### 5. In-Memory Cache (GET Only)
 
-O cache armazena a resposta em memória com base na URL completa:
+Responses are cached in memory indexed by the full URL:
 
 ```typescript
-const data = await api.get("/dados-estaticos", {
+const data = await api.get("/static-data", {
   useCache: true,
-  cacheTTL: 30000, // 30 segundos de validade para esta requisição
+  cacheTTL: 30000, // 30-second validity for this request
 });
 
-// Para limpar o cache manualmente:
+// To manually clear the cache:
 api.clearCache();
 ```
 
-### 6. Telemetria e Métricas
+### 6. Telemetry and Metrics
 
-É possível registrar uma função para capturar métricas de cada requisição (incluindo se a resposta veio do cache):
+You can register a callback to collect metrics for each request (including whether the response was served from cache):
 
 ```typescript
 const api = new HttpClient({
-  baseURL: "https://api.exemplo.com",
+  baseURL: "https://api.example.com",
   onTelemetry: (metrics) => {
     console.log(`URL: ${metrics.url}`);
-    console.log(`Método: ${metrics.method}`);
+    console.log(`Method: ${metrics.method}`);
     console.log(`Status: ${metrics.status}`);
-    console.log(`Duração: ${metrics.durationMs}ms`);
+    console.log(`Duration: ${metrics.durationMs}ms`);
     console.log(`Cache Hit: ${metrics.isCacheHit}`);
     console.log(`Timestamp: ${metrics.timestamp}`);
   },
 });
 ```
 
-### 7. Transformação de Resposta (`transformResponse`)
+### 7. Response Transformation (`transformResponse`)
 
-Útil para sanitização ou conversão de convenções de nomenclatura (ex: `snake_case` para `camelCase`):
+Useful for sanitization or casing conversions (e.g., `snake_case` to `camelCase`):
 
 ```typescript
-const response = await api.get("/usuario", {
+const response = await api.get("/user", {
   transformResponse: (data) => {
     return {
       id: data.user_id,
-      nomeCompleto: data.full_name,
+      fullName: data.full_name,
     };
   },
 });
 ```
 
-### 8. Tratamento de Erros com `HttpError`
+### 8. Error Handling with `HttpError`
 
-Quando a resposta retorna um status fora da faixa 2xx (`!response.ok`), uma exceção `HttpError` é lançada contendo os dados retornados pelo servidor:
+When a response returns a status outside the 2xx range (`!response.ok`), an `HttpError` exception is thrown containing the response payload:
 
 ```typescript
 import { HttpError } from "./errors/HttpError";
 
 try {
-  await api.get("/rota-inexistente");
+  await api.get("/non-existent-route");
 } catch (error) {
   if (error instanceof HttpError) {
-    console.error(`Status HTTP: ${error.status} ${error.statusText}`);
-    console.error("Dados do erro retornados pela API:", error.data);
+    console.error(`HTTP Status: ${error.status} ${error.statusText}`);
+    console.error("API Error Data:", error.data);
   } else {
-    console.error("Erro inesperado:", error);
+    console.error("Unexpected error:", error);
   }
 }
 ```
 
 ---
 
-## Opções de Configuração (`HttpClientConfig`)
+## Configuration Options (`HttpClientConfig`)
 
-A interface de configuração estende as opções padrão do `RequestInit` do Fetch API:
+The configuration interface extends standard Fetch API `RequestInit` options:
 
-| Propriedade | Tipo | Padrão | Descrição |
+| Property | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `baseURL` | `string` | `""` | URL base concatenada aos endpoints das requisições. |
-| `timeout` | `number` | `10000` (10s) | Tempo máximo (em ms) antes de abortar a requisição. |
-| `retries` | `number` | `0` | Quantidade máxima de tentativas em caso de erro retryable. |
-| `retryDelay` | `number` | `1000` (1s) | Tempo base (em ms) para o cálculo do backoff exponencial (`baseDelay * 2^(attempt-1)`). |
-| `useCache` | `boolean` | `false` | Se `true`, ativa o cache em memória para a requisição `GET`. |
-| `cacheTTL` | `number` | `60000` (60s) | Tempo de vida do cache (em ms). |
-| `params` | `Record<string, any>` | `undefined` | Objeto com os parâmetros de consulta (Query String). |
-| `headers` | `HeadersInit` | JSON padrão | Cabeçalhos enviados nas requisições. |
-| `onTelemetry` | `(metrics: TelemetryMetrics) => void` | `undefined` | Callback executado ao finalizar uma requisição com métricas de desempenho. |
-| `transformResponse` | `(data: any) => any` | `undefined` | Função executada sobre o JSON de resposta antes de retorná-lo. |
+| `baseURL` | `string` | `""` | Base URL prepended to request endpoints. |
+| `timeout` | `number` | `10000` (10s) | Maximum time (in ms) before aborting the request. |
+| `retries` | `number` | `0` | Maximum number of retry attempts on retryable errors. |
+| `retryDelay` | `number` | `1000` (1s) | Base delay (in ms) for exponential backoff calculation (`baseDelay * 2^(attempt-1)`). |
+| `useCache` | `boolean` | `false` | When `true`, enables in-memory caching for `GET` requests. |
+| `cacheTTL` | `number` | `60000` (60s) | Cache time-to-live (in ms). |
+| `params` | `Record<string, any>` | `undefined` | Query string parameters object. |
+| `headers` | `HeadersInit` | Standard JSON | HTTP headers sent with requests. |
+| `onTelemetry` | `(metrics: TelemetryMetrics) => void` | `undefined` | Callback invoked upon request completion with performance metrics. |
+| `transformResponse` | `(data: any) => any` | `undefined` | Function applied to the parsed response JSON before returning. |
